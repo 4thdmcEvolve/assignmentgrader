@@ -457,7 +457,7 @@ Be specific and reference the actual work. No markdown formatting.`,
       </div>
 
       <div style={{ textAlign: "center", color: "rgba(255,255,255,0.18)", fontSize: 10, letterSpacing: 3, textTransform: "uppercase" }}>
-        Powered by <span style={{ color: "rgba(201,168,76,0.35)" }}>4THDMC | EVOLVE</span> · Brandon Russell
+        Powered by <span style={{ color: "rgba(201,168,76,0.35)" }}>4THDMC | EVOLVE LLC</span> · Brandon Russell
       </div>
     </div>
   );
