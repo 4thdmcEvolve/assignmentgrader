@@ -65,6 +65,18 @@ export default function App() {
     
     const base = `You are grading student work as an expert teacher.
 
+CRITICAL FORMATTING RULES:
+- Use PLAIN TEXT only. No markdown, no asterisks, no hashtags, no bullet symbols.
+- Use simple dashes (-) for list items if needed.
+- Write in clean, professional format that can be copied directly.
+
+POINTS CALCULATION:
+- Look at the rubric to find the TOTAL POINTS POSSIBLE for this assignment.
+- If the rubric specifies points (e.g., "25 points total" or categories that add up), use that number.
+- Calculate points earned based on the percentage grade.
+- Format as: Letter Grade | Percentage | Points Earned/Total Points (e.g., B+ | 87% | 43.5/50)
+- If no point total is specified in the rubric, just show: Letter Grade | Percentage
+
 Subject: ${subject || "General"}
 Grade Level: ${grade || "Not specified"}
 Assignment Type: ${assignmentType || "Assignment"}
@@ -76,10 +88,67 @@ Student Work:
 "${studentWork}"`;
 
     const instructions = {
-      grade: `${base}\n\nGrade this work and respond with ONLY:\n- A letter grade (A/B/C/D/F)\n- A percentage score\n- One sentence explaining the grade\n\nBe concise.`,
-      quick: `${base}\n\nGrade this work and provide:\n1. Grade: Letter grade and percentage\n2. Report Card Comment: One professional 2-sentence comment suitable for parents\n\nBe brief and specific.`,
-      strengths: `${base}\n\nGrade this work and provide:\n1. Grade: Letter grade and percentage\n2. Strengths: 2 specific things done well\n3. Improve: 2 specific actionable improvements\n\nKeep each point to one sentence. Be direct.`,
-      full: `${base}\n\nGrade this work and provide:\n1. Grade: Letter grade and percentage\n2. Overall: 2-sentence summary\n3. Strengths: 3 specific things done well\n4. Improvements: 3 specific actionable suggestions\n5. Report Card Comment: Professional 2-sentence parent-ready comment\n6. Student Note: One encouraging sentence directly to the student\n\nBe specific and reference the actual work.`,
+      grade: `${base}
+
+Grade this work and respond with ONLY:
+- Letter grade (A, B, C, D, or F with +/- if appropriate)
+- Percentage score
+- Points earned out of total (if rubric specifies total points)
+- One sentence explaining the grade
+
+Be concise. No markdown formatting.`,
+
+      quick: `${base}
+
+Grade this work and provide:
+
+Grade: Letter grade, percentage, and points if rubric specifies total (e.g., B+ | 87% | 43.5/50)
+
+Report Card Comment: One professional 2-sentence comment suitable for parents.
+
+Be brief and specific. No markdown formatting.`,
+
+      strengths: `${base}
+
+Grade this work and provide:
+
+Grade for ${studentName || "Student"}:
+Grade: Letter grade | Percentage | Points earned/total if rubric specifies (e.g., B+ | 87% | 43.5/50)
+
+Strengths:
+1. [First specific strength]
+2. [Second specific strength]
+
+Improve:
+1. [First specific improvement needed]
+2. [Second specific improvement needed]
+
+Keep each point to one sentence. Be direct. No markdown formatting.`,
+
+      full: `${base}
+
+Grade this work and provide:
+
+Grade for ${studentName || "Student"}:
+Grade: Letter grade | Percentage | Points earned/total if rubric specifies (e.g., B+ | 87% | 43.5/50)
+
+Overall: 2-sentence summary of the work quality.
+
+Strengths:
+1. [First specific strength]
+2. [Second specific strength]
+3. [Third specific strength]
+
+Improvements:
+1. [First specific actionable suggestion]
+2. [Second specific actionable suggestion]
+3. [Third specific actionable suggestion]
+
+Report Card Comment: Professional 2-sentence parent-ready comment.
+
+Student Note: One encouraging sentence directly to the student.
+
+Be specific and reference the actual work. No markdown formatting.`,
     };
 
     return instructions[feedbackType];
