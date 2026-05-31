@@ -23,9 +23,95 @@ const FEEDBACK_OPTIONS = [
   { id: "full", label: "📋 Full Feedback", desc: "Everything — detailed and complete" },
 ];
 
+// ─── PASSWORD GATE ─────────────────────────────────────────────────────────
+function PasswordGate({ onUnlock }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
+
+  const handleUnlock = async () => {
+    if (!pw.trim()) { setError("Please enter the access password."); return; }
+    setChecking(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw.trim() })
+      });
+      if (res.ok) {
+        localStorage.setItem("toolkit_password", pw.trim());
+        onUnlock(pw.trim());
+      } else {
+        setError("Incorrect password. Please check your subscriber email and try again.");
+        setPw("");
+      }
+    } catch {
+      setError("Connection error. Please try again.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg, ${DARK}, ${NAVY})`, fontFamily: "'Segoe UI', system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ fontWeight: 900, fontSize: 15, color: "#fff", letterSpacing: 2, marginBottom: 6 }}>
+            4THDMC <span style={{ color: GOLD }}>|</span> EVOLVE LLC
+          </div>
+          <div style={{ fontSize: "clamp(24px, 5vw, 34px)", fontWeight: 900, color: "#fff", lineHeight: 1.15, marginBottom: 8 }}>
+            ASSIGNMENT GRADER<br /><span style={{ color: GOLD }}>&amp; COMMENT GENERATOR</span>
+          </div>
+          <div style={{ width: 36, height: 3, background: GOLD, margin: "12px auto" }} />
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Subscriber access required</div>
+        </div>
+
+        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: 28 }}>
+          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+            Access Password
+          </div>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => setPw(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleUnlock()}
+            placeholder="Enter your toolkit password"
+            style={{ width: "100%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", padding: "12px 14px", fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 12 }}
+            autoFocus
+          />
+          {error && (
+            <div style={{ background: "rgba(255,80,80,0.12)", border: "1px solid rgba(255,80,80,0.3)", color: "#ff9090", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 14 }}>
+              {error}
+            </div>
+          )}
+          <button
+            onClick={handleUnlock}
+            disabled={checking}
+            style={{ width: "100%", padding: 16, background: checking ? "rgba(201,168,76,0.4)" : GOLD, color: DARK, border: "none", borderRadius: 10, fontWeight: 900, fontSize: 15, letterSpacing: 2, cursor: checking ? "not-allowed" : "pointer", textTransform: "uppercase" }}
+          >
+            {checking ? "Checking..." : "Unlock Tool"}
+          </button>
+          <div style={{ textAlign: "center", marginTop: 18, color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+            Not a subscriber?{" "}
+            <a href="https://brrteaching.com" style={{ color: GOLD, textDecoration: "none" }}>Visit brrteaching.com</a>
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", marginTop: 24, color: "rgba(255,255,255,0.18)", fontSize: 10, letterSpacing: 3, textTransform: "uppercase" }}>
+          © 2026 4THDMC | EVOLVE LLC · All Rights Reserved
+        </div>
+      </div>
+    </div>
+  );
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 export default function App() {
+  const stored = localStorage.getItem("toolkit_password") || "";
+  const [unlockedPw, setUnlockedPw] = useState(stored);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  
+
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [assignmentType, setAssignmentType] = useState("");
@@ -42,6 +128,10 @@ export default function App() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const fileRef = useRef();
+
+  if (!unlockedPw) {
+    return <PasswordGate onUnlock={(pw) => setUnlockedPw(pw)} />;
+  }
 
   const handleRubricFile = (e) => {
     const file = e.target.files[0];
@@ -62,7 +152,7 @@ export default function App() {
   const buildPrompt = () => {
     const rubricSection = savedRubric ? `\nRubric/Grading Criteria:\n${savedRubric}` : "";
     const lessonSection = lessonContext ? `\nLesson Context/Objectives (grade against these):\n${lessonContext}` : "";
-    
+
     const base = `You are grading student work as an expert teacher.
 
 CRITICAL FORMATTING RULES:
@@ -162,12 +252,25 @@ Be specific and reference the actual work. No markdown formatting.`,
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildPrompt() })
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 800,
+          messages: [{ role: "user", content: buildPrompt() }],
+          toolkitPassword: unlockedPw
+        })
       });
+
+      if (res.status === 401) {
+        localStorage.removeItem("toolkit_password");
+        setUnlockedPw("");
+        return;
+      }
+
       const json = await res.json();
-      if (json.error) { setError("Error: " + json.error); return; }
-      if (!json.text) { setError("Nothing returned. Try again."); return; }
-      setResult(json.text);
+      if (json.error) { setError("Error: " + json.error.message); return; }
+      const text = (json.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+      if (!text) { setError("Nothing returned. Try again."); return; }
+      setResult(text);
     } catch (e) {
       setError("Request failed: " + e.message);
     } finally {
@@ -232,9 +335,9 @@ Be specific and reference the actual work. No markdown formatting.`,
       {/* NAV */}
       <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", padding: isDesktop ? "14px 32px" : "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <div style={{ fontWeight: 900, fontSize: 16, color: "#fff", letterSpacing: 1 }}>
-          4THDMC <span style={{ color: GOLD }}>|</span> EVOLVE
+          4THDMC <span style={{ color: GOLD }}>|</span> EVOLVE LLC
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {savedRubric && (
             <div style={{ background: "rgba(201,168,76,0.15)", border: `1px solid ${GOLD}`, color: GOLD, fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20, letterSpacing: 1 }}>
               ✓ Rubric
@@ -245,6 +348,12 @@ Be specific and reference the actual work. No markdown formatting.`,
               ✓ Lesson
             </div>
           )}
+          <button
+            onClick={() => { localStorage.removeItem("toolkit_password"); setUnlockedPw(""); }}
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.4)", fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}
+          >
+            Lock
+          </button>
         </div>
       </div>
 
@@ -254,7 +363,7 @@ Be specific and reference the actual work. No markdown formatting.`,
         {!result && (
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: "inline-block", border: `1px solid ${GOLD}`, color: GOLD, fontSize: 10, letterSpacing: 4, padding: "4px 14px", marginBottom: 12, fontWeight: 700, borderRadius: 2, textTransform: "uppercase" }}>
-              4THDMC | EVOLVE
+              4THDMC | EVOLVE LLC
             </div>
             <div style={{ fontSize: isDesktop ? 40 : "clamp(28px, 8vw, 40px)", fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
               ASSIGNMENT GRADER<br /><span style={{ color: GOLD }}>&amp; COMMENT GENERATOR</span>
@@ -268,7 +377,7 @@ Be specific and reference the actual work. No markdown formatting.`,
 
         {!result && (
           <>
-            {/* LESSON CONTEXT — NEW FEATURE */}
+            {/* LESSON CONTEXT */}
             <div style={{ background: "rgba(90,180,232,0.08)", border: `1px solid ${lessonContext ? "#5ab4e8" : "rgba(255,255,255,0.1)"}`, borderRadius: 12, padding: "18px 20px", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div>
@@ -279,11 +388,11 @@ Be specific and reference the actual work. No markdown formatting.`,
                     {lessonContext ? "✓ Lesson objectives loaded — grading will align to what was taught" : "Paste from Lesson Plan Generator to grade against your objectives"}
                   </div>
                 </div>
-                <button onClick={() => setShowLessonContext(!showLessonContext)} style={{ 
-                  background: lessonContext ? "rgba(90,180,232,0.15)" : "transparent", 
-                  border: `1px solid ${lessonContext ? "#5ab4e8" : "rgba(255,255,255,0.2)"}`, 
-                  color: lessonContext ? "#5ab4e8" : "rgba(255,255,255,0.7)", 
-                  padding: "8px 14px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer" 
+                <button onClick={() => setShowLessonContext(!showLessonContext)} style={{
+                  background: lessonContext ? "rgba(90,180,232,0.15)" : "transparent",
+                  border: `1px solid ${lessonContext ? "#5ab4e8" : "rgba(255,255,255,0.2)"}`,
+                  color: lessonContext ? "#5ab4e8" : "rgba(255,255,255,0.7)",
+                  padding: "8px 14px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer"
                 }}>
                   {lessonContext ? "✏️ Edit" : "➕ Add Lesson"}
                 </button>
@@ -457,7 +566,8 @@ Be specific and reference the actual work. No markdown formatting.`,
       </div>
 
       <div style={{ textAlign: "center", color: "rgba(255,255,255,0.18)", fontSize: 10, letterSpacing: 3, textTransform: "uppercase" }}>
-        Powered by <span style={{ color: "rgba(201,168,76,0.35)" }}>4THDMC | EVOLVE LLC</span> · Brandon Russell
+        © 2026 4THDMC | EVOLVE LLC · All Rights Reserved<br />
+        <span style={{ color: "rgba(201,168,76,0.35)" }}>Brandon Russell · The Multiplier · Chattanooga, TN</span>
       </div>
     </div>
   );
