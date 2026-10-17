@@ -3,7 +3,7 @@
 //
 // SETUP IN VERCEL (Settings → Environment Variables):
 //   ANTHROPIC_API_KEY   = your rotated Anthropic API key
-//   TOOLKIT_PASSWORD    = ToolkitEvolve2026
+//   TOOLKIT_PASSWORD    = (set in Vercel dashboard — do not commit the value here)
 
 const rateLimitStore = new Map();
 const MAX_REQUESTS_PER_WINDOW = 40;
